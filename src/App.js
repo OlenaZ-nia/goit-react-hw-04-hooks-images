@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
 
 import { Container } from './components/Container/Container';
@@ -10,92 +10,75 @@ import Modal from './components/Modal/Modal';
 import { Button } from './components/Button/Button';
 import { mapper } from './helpers/mapper';
 
-class App extends Component {
-  state = {
-    images: [],
-    currentPage: 1,
-    searchQuery: '',
-    isLoading: false,
-    error: null,
-    showModal: false,
-    modalImg: '',
-    alt: '',
-  };
+export default function App() {
   
-  componentDidUpdate(prevProps, PrevState) {
-    if (PrevState.searchQuery !== this.state.searchQuery || PrevState.currentPage !==this.state.currentPage) {
-      this.fetchImg();
+  const [images, setImages] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [modalImg, setModalImg] = useState('');
+  const [alt, setAlt] = useState('');
+
+  useEffect(() => {
+    if (!searchQuery) {
+      return;
     }
-  }
-
-  fetchImg = () => {
-    const { currentPage, searchQuery } = this.state;
-
-    this.setState({ isLoading: true });
+    const fetchImg = () => {
+      setIsLoading(true);
     
-    imgApi
-      .fetchImg(searchQuery, currentPage)
-      .then(images => {
-        if (images.total === 0) {
-          return toast.error('Not found!')
-        }
+      imgApi
+        .fetchImg(searchQuery, currentPage)
+        .then(images => {
+          if (images.total === 0) {
+            return toast.error('Not found!')
+          }
         
-        this.setState(prevState => ({
-          images: [...prevState.images, ...mapper(images.hits)],
-        }));
+          setImages(prevState => [...prevState, ...mapper(images.hits)])
 
-        setTimeout(() => {
-          document.querySelector('#gallery').scrollIntoView({
-            behavior: 'smooth', block: 'end',
-          });
-        }, 1000)
-      })
-    .catch(error => this.setState({ error }))
-      .finally(() => {
-        this.setState({ isLoading: false });
-      });
+          setTimeout(() => {
+            document.querySelector('#gallery').scrollIntoView({
+              behavior: 'smooth', block: 'end',
+            });
+          }, 1000)
+        })
+        .catch(error => setError(error))
+        .finally(() => setIsLoading(false));
+    };
+    fetchImg();
+  }, [searchQuery, currentPage])
 
-  }
-
-  onClickLoadMore = () => {
-    this.setState(prevState => ({
-          currentPage: prevState.currentPage + 1,
-        }));
+  const onClickLoadMore = () => {
+    setCurrentPage(prevState =>prevState + 1);
   };
 
-  onChangeQuery = (query) => {
-    this.setState({
-      images: [],
-      currentPage: 1,
-      searchQuery: query,
-      error: null,
-    });
+  const onChangeQuery = (query) => {
+    setImages([]);
+    setCurrentPage(1);
+    setSearchQuery(query);
+    setError(null);
   };
 
-  toggleModal = () => {
-    this.setState(({ showModal }) => ({
-      showModal: !showModal,
-    }));
-    }
+  const toggleModal = () => {
+    setShowModal(!showModal);
+  };
 
-  onClickImg = (img, alt) => {
-    this.setState({
-      showModal: true,
-      modalImg: img,
-      alt: alt,
-    })
+  const onClickImg = (img, alt) => {
+    setShowModal(true);
+    setModalImg(img);
+    setAlt(alt);
   }
 
 
-  render() {
-    const { images, isLoading, showModal, modalImg, alt } = this.state;
-
-    return (
+  return (
       <Container>
-        <Searchbar onSubmit={this.onChangeQuery} />
-        <ToastContainer autoClose={3000} theme={ 'dark'}/>
+        <Searchbar onSubmit={onChangeQuery} />
+      <ToastContainer autoClose={3000} theme={'dark'} />
+      
+      {error && toast.error('An error occured, please retry the request!')}
 
-        {images.length>0 && <ImageGallery images={images} onClickImg={this.onClickImg} />}
+        {images.length>0 && <ImageGallery images={images} onClickImg={onClickImg} />}
 
         {isLoading && <Loader
           type="ThreeDots"
@@ -105,14 +88,15 @@ class App extends Component {
           timeout={3000} 
       />}
 
-        {images.length > 11 && <Button onClickLoadMore={this.onClickLoadMore} />}
+        {images.length > 11 && <Button onClickLoadMore={onClickLoadMore} />}
         
         {showModal && (
-          <Modal src={modalImg } alt={alt} onClose={ this.toggleModal}/>
+          <Modal src={modalImg } alt={alt} onClose={toggleModal}/>
         )}
       </Container>
   );
-  }
 }
 
-export default App;
+
+
+

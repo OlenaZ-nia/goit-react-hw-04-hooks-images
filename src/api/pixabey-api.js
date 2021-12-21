@@ -6,10 +6,14 @@ function fetchImg (searchQuery, page) {
     const per_page = 12;
     
     let url= `${BASE_URL}?image_type=photo&orientation=horizontal&q=${searchQuery}&page=${page}&per_page=${per_page}&key=${API_KEY}`;
-    
+  
   return fetch(url)
-    .then(response =>response.json()) 
-      .then(data=> data)
+    .then(response => {
+      if (response.ok) {
+        return response.json();
+      }
+      return Promise.reject(new Error(`Your query ${searchQuery} not found`));
+    });
 }
 const api = {
   fetchImg,
